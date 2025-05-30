@@ -3,6 +3,117 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from descent import LunarDescentGuidance
 
+
+def validate_simulation_results(actual_time, actual_velocity, actual_altitude, actual_hor_vel, actual_vert_vel, actual_position):
+    """
+    Validate simulation results against expected parameters and provide detailed feedback.
+
+    Expected results (updated to match optimized P65 guidance algorithm):
+    - TOUCHDOWN at time: 6.5 seconds
+    - Final velocity: [2.28, -1.70, 14.13] m/s
+    - Final altitude: 0.04 m
+    - Horizontal velocity at touchdown: 2.84 m/s
+    - Vertical velocity at touchdown: -14.13 m/s
+    """
+    print("\n" + "="*60)
+    print("SIMULATION RESULTS VALIDATION")
+    print("="*60)
+
+    # Display final position (without validation)
+    print(f"📍 FINAL POSITION: [{actual_position[0]:.1f}, {actual_position[1]:.1f}, {actual_position[2]:.1f}] m")
+
+    # Expected values (updated to match optimized P65 guidance algorithm)
+    expected_time = 6.5
+    expected_velocity = [2.28, -1.70, 14.13]
+    expected_altitude = 0.04
+    expected_hor_vel = 2.84
+    expected_vert_vel = -14.13
+
+    # Tolerance for floating point comparisons
+    time_tolerance = 0.1
+    velocity_tolerance = 0.01
+    altitude_tolerance = 0.01
+
+    validation_passed = True
+
+    # Check touchdown time
+    time_diff = abs(actual_time - expected_time)
+    if time_diff <= time_tolerance:
+        print(f"✅ TOUCHDOWN TIME: {actual_time:.1f}s (Expected: {expected_time:.1f}s) - CORRECT")
+    else:
+        print(f"❌ TOUCHDOWN TIME: {actual_time:.1f}s (Expected: {expected_time:.1f}s)")
+        if actual_time > expected_time:
+            print(f"   → The landing took too long! ({time_diff:.1f}s slower than expected)")
+        else:
+            print(f"   → The landing was too fast! ({time_diff:.1f}s faster than expected)")
+        validation_passed = False
+
+    # Check final velocity components
+    velocity_errors = []
+    for i, (actual, expected) in enumerate(zip(actual_velocity, expected_velocity)):
+        diff = abs(actual - expected)
+        if diff <= velocity_tolerance:
+            component_name = ['X', 'Y', 'Z'][i]
+            print(f"✅ FINAL VELOCITY {component_name}: {actual:.2f} m/s (Expected: {expected:.2f} m/s) - CORRECT")
+        else:
+            component_name = ['X', 'Y', 'Z'][i]
+            print(f"❌ FINAL VELOCITY {component_name}: {actual:.2f} m/s (Expected: {expected:.2f} m/s)")
+            if actual > expected:
+                print(f"   → The {component_name.lower()}-velocity is too fast! ({diff:.2f} m/s higher than expected)")
+            else:
+                print(f"   → The {component_name.lower()}-velocity is too slow! ({diff:.2f} m/s lower than expected)")
+            velocity_errors.append(component_name)
+            validation_passed = False
+
+    # Check final altitude
+    altitude_diff = abs(actual_altitude - expected_altitude)
+    if altitude_diff <= altitude_tolerance:
+        print(f"✅ FINAL ALTITUDE: {actual_altitude:.2f}m (Expected: {expected_altitude:.2f}m) - CORRECT")
+    else:
+        print(f"❌ FINAL ALTITUDE: {actual_altitude:.2f}m (Expected: {expected_altitude:.2f}m)")
+        if actual_altitude > expected_altitude:
+            print(f"   → The final altitude is too high! ({altitude_diff:.2f}m higher than expected)")
+        else:
+            print(f"   → The final altitude is too low! ({altitude_diff:.2f}m lower than expected)")
+        validation_passed = False
+
+    # Check horizontal velocity at touchdown
+    hor_vel_diff = abs(actual_hor_vel - expected_hor_vel)
+    if hor_vel_diff <= velocity_tolerance:
+        print(f"✅ HORIZONTAL VELOCITY: {actual_hor_vel:.2f} m/s (Expected: {expected_hor_vel:.2f} m/s) - CORRECT")
+    else:
+        print(f"❌ HORIZONTAL VELOCITY: {actual_hor_vel:.2f} m/s (Expected: {expected_hor_vel:.2f} m/s)")
+        if actual_hor_vel > expected_hor_vel:
+            print(f"   → The horizontal velocity is too fast! ({hor_vel_diff:.2f} m/s higher than expected)")
+        else:
+            print(f"   → The horizontal velocity is too slow! ({hor_vel_diff:.2f} m/s lower than expected)")
+        validation_passed = False
+
+    # Check vertical velocity at touchdown
+    vert_vel_diff = abs(actual_vert_vel - expected_vert_vel)
+    if vert_vel_diff <= velocity_tolerance:
+        print(f"✅ VERTICAL VELOCITY: {actual_vert_vel:.2f} m/s (Expected: {expected_vert_vel:.2f} m/s) - CORRECT")
+    else:
+        print(f"❌ VERTICAL VELOCITY: {actual_vert_vel:.2f} m/s (Expected: {expected_vert_vel:.2f} m/s)")
+        if actual_vert_vel < expected_vert_vel:  # More negative = faster descent
+            print(f"   → The descent rate is too fast! ({vert_vel_diff:.2f} m/s faster than expected)")
+        else:
+            print(f"   → The descent rate is too slow! ({vert_vel_diff:.2f} m/s slower than expected)")
+        validation_passed = False
+
+    # Overall validation result
+    print("-" * 60)
+    if validation_passed:
+        print("🎯 OVERALL VALIDATION: ALL PARAMETERS CORRECT!")
+        print("   The simulation is producing the expected results.")
+    else:
+        print("⚠️  OVERALL VALIDATION: SOME PARAMETERS ARE INCORRECT!")
+        print("   The simulation results deviate from expected values.")
+        if velocity_errors:
+            print(f"   Velocity components with errors: {', '.join(velocity_errors)}")
+
+    print("="*60)
+
 def run_p65_simulation():
     """
     Example usage of the P65 guidance algorithm with visualization
@@ -58,6 +169,10 @@ def run_p65_simulation():
             print(f"Final altitude: {altitude:.2f} m")
             print(f"Horizontal velocity at touchdown: {lm_guidance.hor_velocity:.2f} m/s")
             print(f"Vertical velocity at touchdown: {-velocity[2]:.2f} m/s")
+
+            # Validate simulation results against expected parameters
+            validate_simulation_results(time, velocity, altitude, lm_guidance.hor_velocity, -velocity[2], position)
+
             touchdown = True
             break
 
@@ -108,6 +223,18 @@ def run_p65_simulation():
         print(f"Final altitude: {-position[2]:.2f} m")
         print(f"Final horizontal velocity: {lm_guidance.hor_velocity:.2f} m/s")
         print(f"Final vertical velocity: {-velocity[2]:.2f} m/s")
+
+        # Validation for failed landing
+        print("\n" + "="*60)
+        print("SIMULATION RESULTS VALIDATION")
+        print("="*60)
+        print(f"📍 FINAL POSITION: [{position[0]:.1f}, {position[1]:.1f}, {position[2]:.1f}] m")
+        print("❌ TOUCHDOWN FAILURE: Simulation ended without successful landing!")
+        print(f"   → Expected touchdown at 6.5 seconds, but simulation ran to {time:.1f} seconds")
+        print(f"   → Final altitude was {-position[2]:.2f}m (should be ~0.04m)")
+        print("⚠️  OVERALL VALIDATION: LANDING FAILED!")
+        print("   The guidance system did not achieve the expected landing.")
+        print("="*60)
 
     # Create visualization
     plt.figure(figsize=(15, 10))

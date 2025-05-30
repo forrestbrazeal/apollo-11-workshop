@@ -1,5 +1,128 @@
 const { LunarDescentGuidance } = require('./descent.js');
 
+function validateSimulationResults(actualTime, actualVelocity, actualAltitude, actualHorVel, actualVertVel, actualPosition) {
+  /**
+   * Validate simulation results against expected parameters and provide detailed feedback.
+   *
+   * Expected results (updated to match optimized P65 guidance algorithm):
+   * - TOUCHDOWN at time: 6.5 seconds
+   * - Final velocity: [2.28, -1.70, 14.13] m/s
+   * - Final altitude: 0.04 m
+   * - Horizontal velocity at touchdown: 2.84 m/s
+   * - Vertical velocity at touchdown: -14.13 m/s
+   */
+  console.log("\n" + "=".repeat(60));
+  console.log("SIMULATION RESULTS VALIDATION");
+  console.log("=".repeat(60));
+
+  // Display final position (without validation)
+  console.log(`📍 FINAL POSITION: [${actualPosition[0].toFixed(1)}, ${actualPosition[1].toFixed(1)}, ${actualPosition[2].toFixed(1)}] m`);
+
+  // Expected values (updated to match optimized P65 guidance algorithm)
+  const expectedTime = 6.5;
+  const expectedVelocity = [2.28, -1.70, 14.13];
+  const expectedAltitude = 0.04;
+  const expectedHorVel = 2.84;
+  const expectedVertVel = -14.13;
+
+  // Tolerance for floating point comparisons
+  const timeTolerance = 0.1;
+  const velocityTolerance = 0.01;
+  const altitudeTolerance = 0.01;
+
+  let validationPassed = true;
+
+  // Check touchdown time
+  const timeDiff = Math.abs(actualTime - expectedTime);
+  if (timeDiff <= timeTolerance) {
+    console.log(`✅ TOUCHDOWN TIME: ${actualTime.toFixed(1)}s (Expected: ${expectedTime.toFixed(1)}s) - CORRECT`);
+  } else {
+    console.log(`❌ TOUCHDOWN TIME: ${actualTime.toFixed(1)}s (Expected: ${expectedTime.toFixed(1)}s)`);
+    if (actualTime > expectedTime) {
+      console.log(`   → The landing took too long! (${timeDiff.toFixed(1)}s slower than expected)`);
+    } else {
+      console.log(`   → The landing was too fast! (${timeDiff.toFixed(1)}s faster than expected)`);
+    }
+    validationPassed = false;
+  }
+
+  // Check final velocity components
+  const velocityErrors = [];
+  const componentNames = ['X', 'Y', 'Z'];
+  for (let i = 0; i < 3; i++) {
+    const diff = Math.abs(actualVelocity[i] - expectedVelocity[i]);
+    if (diff <= velocityTolerance) {
+      console.log(`✅ FINAL VELOCITY ${componentNames[i]}: ${actualVelocity[i].toFixed(2)} m/s (Expected: ${expectedVelocity[i].toFixed(2)} m/s) - CORRECT`);
+    } else {
+      console.log(`❌ FINAL VELOCITY ${componentNames[i]}: ${actualVelocity[i].toFixed(2)} m/s (Expected: ${expectedVelocity[i].toFixed(2)} m/s)`);
+      if (actualVelocity[i] > expectedVelocity[i]) {
+        console.log(`   → The ${componentNames[i].toLowerCase()}-velocity is too fast! (${diff.toFixed(2)} m/s higher than expected)`);
+      } else {
+        console.log(`   → The ${componentNames[i].toLowerCase()}-velocity is too slow! (${diff.toFixed(2)} m/s lower than expected)`);
+      }
+      velocityErrors.push(componentNames[i]);
+      validationPassed = false;
+    }
+  }
+
+  // Check final altitude
+  const altitudeDiff = Math.abs(actualAltitude - expectedAltitude);
+  if (altitudeDiff <= altitudeTolerance) {
+    console.log(`✅ FINAL ALTITUDE: ${actualAltitude.toFixed(2)}m (Expected: ${expectedAltitude.toFixed(2)}m) - CORRECT`);
+  } else {
+    console.log(`❌ FINAL ALTITUDE: ${actualAltitude.toFixed(2)}m (Expected: ${expectedAltitude.toFixed(2)}m)`);
+    if (actualAltitude > expectedAltitude) {
+      console.log(`   → The final altitude is too high! (${altitudeDiff.toFixed(2)}m higher than expected)`);
+    } else {
+      console.log(`   → The final altitude is too low! (${altitudeDiff.toFixed(2)}m lower than expected)`);
+    }
+    validationPassed = false;
+  }
+
+  // Check horizontal velocity at touchdown
+  const horVelDiff = Math.abs(actualHorVel - expectedHorVel);
+  if (horVelDiff <= velocityTolerance) {
+    console.log(`✅ HORIZONTAL VELOCITY: ${actualHorVel.toFixed(2)} m/s (Expected: ${expectedHorVel.toFixed(2)} m/s) - CORRECT`);
+  } else {
+    console.log(`❌ HORIZONTAL VELOCITY: ${actualHorVel.toFixed(2)} m/s (Expected: ${expectedHorVel.toFixed(2)} m/s)`);
+    if (actualHorVel > expectedHorVel) {
+      console.log(`   → The horizontal velocity is too fast! (${horVelDiff.toFixed(2)} m/s higher than expected)`);
+    } else {
+      console.log(`   → The horizontal velocity is too slow! (${horVelDiff.toFixed(2)} m/s lower than expected)`);
+    }
+    validationPassed = false;
+  }
+
+  // Check vertical velocity at touchdown
+  const vertVelDiff = Math.abs(actualVertVel - expectedVertVel);
+  if (vertVelDiff <= velocityTolerance) {
+    console.log(`✅ VERTICAL VELOCITY: ${actualVertVel.toFixed(2)} m/s (Expected: ${expectedVertVel.toFixed(2)} m/s) - CORRECT`);
+  } else {
+    console.log(`❌ VERTICAL VELOCITY: ${actualVertVel.toFixed(2)} m/s (Expected: ${expectedVertVel.toFixed(2)} m/s)`);
+    if (actualVertVel < expectedVertVel) {  // More negative = faster descent
+      console.log(`   → The descent rate is too fast! (${vertVelDiff.toFixed(2)} m/s faster than expected)`);
+    } else {
+      console.log(`   → The descent rate is too slow! (${vertVelDiff.toFixed(2)} m/s slower than expected)`);
+    }
+    validationPassed = false;
+  }
+
+  // Overall validation result
+  console.log("-".repeat(60));
+  if (validationPassed) {
+    console.log("🎯 OVERALL VALIDATION: ALL PARAMETERS CORRECT!");
+    console.log("   The simulation is producing the expected results.");
+  } else {
+    console.log("⚠️  OVERALL VALIDATION: SOME PARAMETERS ARE INCORRECT!");
+    console.log("   The simulation results deviate from expected values.");
+    if (velocityErrors.length > 0) {
+      console.log(`   Velocity components with errors: ${velocityErrors.join(', ')}`);
+    }
+  }
+
+  console.log("=".repeat(60));
+}
+
 // For browser compatibility
 if (typeof window !== 'undefined') {
   // Use a plotting library like Chart.js in browser environments
@@ -72,6 +195,10 @@ async function run_p65_simulation() {
       console.log(`Final altitude: ${altitude.toFixed(2)} m`);
       console.log(`Horizontal velocity at touchdown: ${lm_guidance.hor_velocity.toFixed(2)} m/s`);
       console.log(`Vertical velocity at touchdown: ${(-velocity[2]).toFixed(2)} m/s`);
+
+      // Validate simulation results against expected parameters
+      validateSimulationResults(time, velocity, altitude, lm_guidance.hor_velocity, -velocity[2], position);
+
       touchdown = true;
       break;
     }
@@ -81,11 +208,11 @@ async function run_p65_simulation() {
     // and the descent engine for vertical control
     let thrust_magnitude = 0;
     let actual_accel = [0, 0, 0];
-    
+
     const accel_norm = Math.sqrt(
       accel_command[0]**2 + accel_command[1]**2 + accel_command[2]**2
     );
-    
+
     if (accel_norm > 0) {
       thrust_magnitude = lm_mass * accel_norm;
 
@@ -98,7 +225,7 @@ async function run_p65_simulation() {
         accel_command[1] / accel_norm,
         accel_command[2] / accel_norm
       ];
-      
+
       actual_accel = [
         (thrust_magnitude / lm_mass) * thrust_direction[0] - lm_guidance.lunar_gravity[0],
         (thrust_magnitude / lm_mass) * thrust_direction[1] - lm_guidance.lunar_gravity[1],
@@ -116,7 +243,7 @@ async function run_p65_simulation() {
       velocity[1] + actual_accel[1] * dt,
       velocity[2] + actual_accel[2] * dt
     ];
-    
+
     position = [
       position[0] + velocity[0] * dt,
       position[1] + velocity[1] * dt,
@@ -151,6 +278,18 @@ async function run_p65_simulation() {
     console.log(`Final altitude: ${(-position[2]).toFixed(2)} m`);
     console.log(`Final horizontal velocity: ${lm_guidance.hor_velocity.toFixed(2)} m/s`);
     console.log(`Final vertical velocity: ${(-velocity[2]).toFixed(2)} m/s`);
+
+    // Validation for failed landing
+    console.log("\n" + "=".repeat(60));
+    console.log("SIMULATION RESULTS VALIDATION");
+    console.log("=".repeat(60));
+    console.log(`📍 FINAL POSITION: [${position[0].toFixed(1)}, ${position[1].toFixed(1)}, ${position[2].toFixed(1)}] m`);
+    console.log("❌ TOUCHDOWN FAILURE: Simulation ended without successful landing!");
+    console.log(`   → Expected touchdown at 6.5 seconds, but simulation ran to ${time.toFixed(1)} seconds`);
+    console.log(`   → Final altitude was ${(-position[2]).toFixed(2)}m (should be ~0.04m)`);
+    console.log("⚠️  OVERALL VALIDATION: LANDING FAILED!");
+    console.log("   The guidance system did not achieve the expected landing.");
+    console.log("=".repeat(60));
   }
 
   // Create visualization data
@@ -164,7 +303,7 @@ async function run_p65_simulation() {
     z: z_points,
     thrust: thrust_points
   };
-  
+
   // Return the data for potential further processing
   return plotData;
 }

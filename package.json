@@ -1,10 +1,16 @@
 {
   "scripts": {
     "lint": "markdownlint-cli2 *.md translations/*.md Comanche055/*.md Luminary099/*.md --config .markdownlint.yml",
-    "lint:fix": "markdownlint-cli2 *.md translations/*.md Comanche055/*.md Luminary099/*.md --config .markdownlint.yml --fix"
+    "lint:fix": "markdownlint-cli2 *.md translations/*.md Comanche055/*.md Luminary099/*.md --config .markdownlint.yml --fix",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {},
   "devDependencies": {
-    "markdownlint-cli2": "^0.16.0"
+    "markdownlint-cli2": "^0.16.0",
+    "jest": "^29.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node"
   }
 }
