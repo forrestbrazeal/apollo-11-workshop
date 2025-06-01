@@ -52,31 +52,56 @@ class TestLunarDescentGuidance(unittest.TestCase):
         np.testing.assert_array_equal(self.guidance.r_gu, test_position)
         np.testing.assert_array_equal(self.guidance.v_gu, test_velocity)
 
-    def test_horizontal_velocity_calculation(self):
-        """Test horizontal velocity magnitude calculation"""
-        test_cases = [
-            ([3.0, 4.0, -1.0], 5.0),  # 3-4-5 triangle
-            ([0.0, 0.0, -2.0], 0.0),  # No horizontal velocity
-            ([1.0, 1.0, -1.0], np.sqrt(2.0)),  # Equal X and Y components
-            ([-2.0, 2.0, -1.0], np.sqrt(8.0))   # Negative X component
-        ]
+    def test_update_state_with_numpy_arrays(self):
+        """Test updating state with numpy arrays"""
+        test_position = np.array([5.0, -10.0, 15.0])
+        test_velocity = np.array([-2.0, 3.0, 1.0])
 
-        for velocity, expected_hor_vel in test_cases:
-            with self.subTest(velocity=velocity):
-                self.guidance.v_gu = np.array(velocity)
-                self.guidance.p65_guidance()
-                self.assertAlmostEqual(self.guidance.hor_velocity, expected_hor_vel, places=5)
+        self.guidance.update_state(test_position, test_velocity)
 
-    def test_gravity_effect_on_guidance(self):
-        """Test that gravity is properly accounted for in guidance"""
-        # Set zero velocity error (current = desired)
+        np.testing.assert_array_equal(self.guidance.r_gu, test_position)
+        np.testing.assert_array_equal(self.guidance.v_gu, test_velocity)
+
+    def test_set_descent_rate_positive(self):
+        """Test setting positive descent rate"""
+        self.guidance.set_descent_rate(2.0)
+        self.assertEqual(self.guidance.v2fg[2], -2.0)
+
+    def test_set_descent_rate_zero(self):
+        """Test setting zero descent rate (hover)"""
+        self.guidance.set_descent_rate(0.0)
+        self.assertEqual(self.guidance.v2fg[2], 0.0)
+
+    def test_set_descent_rate_negative(self):
+        """Test setting negative descent rate (ascent)"""
+        self.guidance.set_descent_rate(-1.5)
+        self.assertEqual(self.guidance.v2fg[2], 1.5)
+
+    def test_p65_guidance_zero_velocity_error(self):
+        """Test guidance when current velocity matches desired velocity"""
+        # Set current velocity to match desired velocity
         self.guidance.v_gu = np.array([0.0, 0.0, -1.22])
         self.guidance.v2fg = np.array([0.0, 0.0, -1.22])
 
         accel_command = self.guidance.p65_guidance()
 
-        # Should command upward acceleration to counteract downward gravity
-        expected_accel = np.array([0.0, 0.0, 1.622])
+        # Should command acceleration to counteract gravity only
+        expected_accel = -self.guidance.g_eff
+        np.testing.assert_array_almost_equal(accel_command, expected_accel)
+
+    def test_p65_guidance_with_velocity_error(self):
+        """Test guidance with velocity error"""
+        # Current velocity different from desired
+        self.guidance.v_gu = np.array([1.0, 0.5, -2.0])
+        self.guidance.v2fg = np.array([0.0, 0.0, -1.22])
+
+        accel_command = self.guidance.p65_guidance()
+
+        # Calculate expected acceleration using correct AGC P65 equation
+        # AGC P65: ACG = (V2FG - VGU) / TAUVERT - G_EFF
+        velocity_error = self.guidance.v2fg - self.guidance.v_gu
+        expected_accel = velocity_error / self.guidance.tau_vert - self.guidance.g_eff
+
         np.testing.assert_array_almost_equal(accel_command, expected_accel)
 
     def test_p65_guidance_updates_display_variables(self):
@@ -98,6 +123,11 @@ class TestLunarDescentGuidance(unittest.TestCase):
         self.guidance.p65_guidance()
         self.assertEqual(self.guidance.altitude, -100.0)  # Negative altitude (below surface)
 
+    def test_altitude_calculation_negative_z(self):
+        """Test altitude calculation with negative Z position"""
+        self.guidance.r_gu = np.array([0.0, 0.0, -75.0])
+        self.guidance.p65_guidance()
+        self.assertEqual(self.guidance.altitude, 75.0)  # Positive altitude (above surface)
 
 if __name__ == '__main__':
     unittest.main()

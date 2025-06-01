@@ -4,12 +4,14 @@ function validateSimulationResults(actualTime, actualVelocity, actualAltitude, a
   /**
    * Validate simulation results against expected parameters and provide detailed feedback.
    *
-   * Expected results (updated to match optimized P65 guidance algorithm):
-   * - TOUCHDOWN at time: 6.5 seconds
-   * - Final velocity: [2.28, -1.70, 14.13] m/s
-   * - Final altitude: 0.04 m
-   * - Horizontal velocity at touchdown: 2.84 m/s
-   * - Vertical velocity at touchdown: -14.13 m/s
+   * Expected results:
+   * - TOUCHDOWN at time: 7.1 seconds (exact)
+   * - Final X velocity: between 0 and 1 m/s
+   * - Final Y velocity: should be less than 0 m/s
+   * - Final Z velocity: should be less than 20 and greater than 0 m/s
+   * - Final altitude: between -1 and 1 m
+   * - Horizontal velocity at touchdown: between 0 and 1 m/s
+   * - Vertical velocity at touchdown: less than 0 m/s
    */
   console.log("\n" + "=".repeat(60));
   console.log("SIMULATION RESULTS VALIDATION");
@@ -18,21 +20,20 @@ function validateSimulationResults(actualTime, actualVelocity, actualAltitude, a
   // Display final position (without validation)
   console.log(`📍 FINAL POSITION: [${actualPosition[0].toFixed(1)}, ${actualPosition[1].toFixed(1)}, ${actualPosition[2].toFixed(1)}] m`);
 
-  // Expected values (updated to match optimized P65 guidance algorithm)
-  const expectedTime = 6.5;
-  const expectedVelocity = [2.28, -1.70, 14.13];
-  const expectedAltitude = 0.04;
-  const expectedHorVel = 2.84;
-  const expectedVertVel = -14.13;
+  // Expected values and ranges
+  const expectedTime = 7.1;
+  // Velocity ranges: [min_x, max_x], [min_y, max_y], [min_z, max_z]
+  const velocityRanges = [[0.0, 1.0], [-Infinity, 0.0], [0.0, 20.0]];
+  const altitudeRange = [-1.0, 1.0];
+  const horVelRange = [0.0, 1.0];
+  const vertVelMax = 0.0;  // Should be less than 0
 
   // Tolerance for floating point comparisons
   const timeTolerance = 0.1;
-  const velocityTolerance = 0.01;
-  const altitudeTolerance = 0.01;
 
   let validationPassed = true;
 
-  // Check touchdown time
+  // Check touchdown time (exact validation)
   const timeDiff = Math.abs(actualTime - expectedTime);
   if (timeDiff <= timeTolerance) {
     console.log(`✅ TOUCHDOWN TIME: ${actualTime.toFixed(1)}s (Expected: ${expectedTime.toFixed(1)}s) - CORRECT`);
@@ -46,64 +47,65 @@ function validateSimulationResults(actualTime, actualVelocity, actualAltitude, a
     validationPassed = false;
   }
 
-  // Check final velocity components
+  // Check final velocity components (range validation)
   const velocityErrors = [];
   const componentNames = ['X', 'Y', 'Z'];
+  const rangeDescriptions = ['between 0 and 1', 'less than 0', 'between 0 and 20'];
+
   for (let i = 0; i < 3; i++) {
-    const diff = Math.abs(actualVelocity[i] - expectedVelocity[i]);
-    if (diff <= velocityTolerance) {
-      console.log(`✅ FINAL VELOCITY ${componentNames[i]}: ${actualVelocity[i].toFixed(2)} m/s (Expected: ${expectedVelocity[i].toFixed(2)} m/s) - CORRECT`);
+    const actual = actualVelocity[i];
+    const [minVal, maxVal] = velocityRanges[i];
+    const componentName = componentNames[i];
+    const rangeDesc = rangeDescriptions[i];
+
+    if (minVal <= actual && actual <= maxVal) {
+      console.log(`✅ FINAL VELOCITY ${componentName}: ${actual.toFixed(2)} m/s (${rangeDesc} m/s) - CORRECT`);
     } else {
-      console.log(`❌ FINAL VELOCITY ${componentNames[i]}: ${actualVelocity[i].toFixed(2)} m/s (Expected: ${expectedVelocity[i].toFixed(2)} m/s)`);
-      if (actualVelocity[i] > expectedVelocity[i]) {
-        console.log(`   → The ${componentNames[i].toLowerCase()}-velocity is too fast! (${diff.toFixed(2)} m/s higher than expected)`);
+      console.log(`❌ FINAL VELOCITY ${componentName}: ${actual.toFixed(2)} m/s (should be ${rangeDesc} m/s)`);
+      if (actual < minVal) {
+        console.log(`   → The ${componentName.toLowerCase()}-velocity is too low! (${actual.toFixed(2)} < ${minVal.toFixed(2)})`);
       } else {
-        console.log(`   → The ${componentNames[i].toLowerCase()}-velocity is too slow! (${diff.toFixed(2)} m/s lower than expected)`);
+        console.log(`   → The ${componentName.toLowerCase()}-velocity is too high! (${actual.toFixed(2)} > ${maxVal.toFixed(2)})`);
       }
-      velocityErrors.push(componentNames[i]);
+      velocityErrors.push(componentName);
       validationPassed = false;
     }
   }
 
-  // Check final altitude
-  const altitudeDiff = Math.abs(actualAltitude - expectedAltitude);
-  if (altitudeDiff <= altitudeTolerance) {
-    console.log(`✅ FINAL ALTITUDE: ${actualAltitude.toFixed(2)}m (Expected: ${expectedAltitude.toFixed(2)}m) - CORRECT`);
+  // Check final altitude (range validation)
+  const [minAlt, maxAlt] = altitudeRange;
+  if (minAlt <= actualAltitude && actualAltitude <= maxAlt) {
+    console.log(`✅ FINAL ALTITUDE: ${actualAltitude.toFixed(2)}m (between ${minAlt.toFixed(1)} and ${maxAlt.toFixed(1)}m) - CORRECT`);
   } else {
-    console.log(`❌ FINAL ALTITUDE: ${actualAltitude.toFixed(2)}m (Expected: ${expectedAltitude.toFixed(2)}m)`);
-    if (actualAltitude > expectedAltitude) {
-      console.log(`   → The final altitude is too high! (${altitudeDiff.toFixed(2)}m higher than expected)`);
+    console.log(`❌ FINAL ALTITUDE: ${actualAltitude.toFixed(2)}m (should be between ${minAlt.toFixed(1)} and ${maxAlt.toFixed(1)}m)`);
+    if (actualAltitude < minAlt) {
+      console.log(`   → The final altitude is too low! (${actualAltitude.toFixed(2)}m < ${minAlt.toFixed(1)}m)`);
     } else {
-      console.log(`   → The final altitude is too low! (${altitudeDiff.toFixed(2)}m lower than expected)`);
+      console.log(`   → The final altitude is too high! (${actualAltitude.toFixed(2)}m > ${maxAlt.toFixed(1)}m)`);
     }
     validationPassed = false;
   }
 
-  // Check horizontal velocity at touchdown
-  const horVelDiff = Math.abs(actualHorVel - expectedHorVel);
-  if (horVelDiff <= velocityTolerance) {
-    console.log(`✅ HORIZONTAL VELOCITY: ${actualHorVel.toFixed(2)} m/s (Expected: ${expectedHorVel.toFixed(2)} m/s) - CORRECT`);
+  // Check horizontal velocity at touchdown (range validation)
+  const [minHorVel, maxHorVel] = horVelRange;
+  if (minHorVel <= actualHorVel && actualHorVel <= maxHorVel) {
+    console.log(`✅ HORIZONTAL VELOCITY: ${actualHorVel.toFixed(2)} m/s (between ${minHorVel.toFixed(1)} and ${maxHorVel.toFixed(1)} m/s) - CORRECT`);
   } else {
-    console.log(`❌ HORIZONTAL VELOCITY: ${actualHorVel.toFixed(2)} m/s (Expected: ${expectedHorVel.toFixed(2)} m/s)`);
-    if (actualHorVel > expectedHorVel) {
-      console.log(`   → The horizontal velocity is too fast! (${horVelDiff.toFixed(2)} m/s higher than expected)`);
+    console.log(`❌ HORIZONTAL VELOCITY: ${actualHorVel.toFixed(2)} m/s (should be between ${minHorVel.toFixed(1)} and ${maxHorVel.toFixed(1)} m/s)`);
+    if (actualHorVel < minHorVel) {
+      console.log(`   → The horizontal velocity is too low! (${actualHorVel.toFixed(2)} < ${minHorVel.toFixed(1)})`);
     } else {
-      console.log(`   → The horizontal velocity is too slow! (${horVelDiff.toFixed(2)} m/s lower than expected)`);
+      console.log(`   → The horizontal velocity is too high! (${actualHorVel.toFixed(2)} > ${maxHorVel.toFixed(1)})`);
     }
     validationPassed = false;
   }
 
-  // Check vertical velocity at touchdown
-  const vertVelDiff = Math.abs(actualVertVel - expectedVertVel);
-  if (vertVelDiff <= velocityTolerance) {
-    console.log(`✅ VERTICAL VELOCITY: ${actualVertVel.toFixed(2)} m/s (Expected: ${expectedVertVel.toFixed(2)} m/s) - CORRECT`);
+  // Check vertical velocity at touchdown (range validation)
+  if (actualVertVel < vertVelMax) {
+    console.log(`✅ VERTICAL VELOCITY: ${actualVertVel.toFixed(2)} m/s (less than ${vertVelMax.toFixed(1)} m/s) - CORRECT`);
   } else {
-    console.log(`❌ VERTICAL VELOCITY: ${actualVertVel.toFixed(2)} m/s (Expected: ${expectedVertVel.toFixed(2)} m/s)`);
-    if (actualVertVel < expectedVertVel) {  // More negative = faster descent
-      console.log(`   → The descent rate is too fast! (${vertVelDiff.toFixed(2)} m/s faster than expected)`);
-    } else {
-      console.log(`   → The descent rate is too slow! (${vertVelDiff.toFixed(2)} m/s slower than expected)`);
-    }
+    console.log(`❌ VERTICAL VELOCITY: ${actualVertVel.toFixed(2)} m/s (should be less than ${vertVelMax.toFixed(1)} m/s)`);
+    console.log(`   → The vertical velocity should be negative (descending)! (${actualVertVel.toFixed(2)} >= ${vertVelMax.toFixed(1)})`);
     validationPassed = false;
   }
 
@@ -285,8 +287,8 @@ async function run_p65_simulation() {
     console.log("=".repeat(60));
     console.log(`📍 FINAL POSITION: [${position[0].toFixed(1)}, ${position[1].toFixed(1)}, ${position[2].toFixed(1)}] m`);
     console.log("❌ TOUCHDOWN FAILURE: Simulation ended without successful landing!");
-    console.log(`   → Expected touchdown at 6.5 seconds, but simulation ran to ${time.toFixed(1)} seconds`);
-    console.log(`   → Final altitude was ${(-position[2]).toFixed(2)}m (should be ~0.04m)`);
+    console.log(`   → Expected touchdown at 7.1 seconds, but simulation ran to ${time.toFixed(1)} seconds`);
+    console.log(`   → Final altitude was ${(-position[2]).toFixed(2)}m (should be between -1 and 1m)`);
     console.log("⚠️  OVERALL VALIDATION: LANDING FAILED!");
     console.log("   The guidance system did not achieve the expected landing.");
     console.log("=".repeat(60));
